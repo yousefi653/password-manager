@@ -1,6 +1,7 @@
 import os
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 import bcrypt
 
@@ -44,3 +45,24 @@ def kdf(mpassword, salt=None):
     if check_salt:
         return key
     return key, salt
+
+
+def aes_gcm_encrypt(password, key):
+    password = password.encode("utf-8")
+    nonce = os.urandom(12)
+
+    encryptor = Cipher(
+        algorithm=algorithms.AES(key), mode=modes.GCM(nonce), backend=backend
+    ).encryptor()
+    encrypted = encryptor.update(password) + encryptor.finalize()
+    tag = encryptor.tag
+    return nonce, encrypted, tag
+
+
+def aes_gcm_decrypt(key, nonce, encrypted, tag):
+    decryptor = Cipher(
+        algorithm=algorithms.AES(key), mode=modes.GCM(nonce, tag), backend=backend
+    ).decryptor()
+
+    data = decryptor.update(encrypted) + decryptor.finalize()
+    return data
