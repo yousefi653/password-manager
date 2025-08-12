@@ -1,6 +1,7 @@
 import sqlite3
 import os
 from getpass import getpass
+import crypto
 
 
 def check_db():
@@ -15,7 +16,8 @@ def check_db():
         p2 = getpass(">Enter your master password again: ").strip()
 
         if p1 == p2:
-            if create_db(p1):
+            hashed_pass = crypto.encrypt_bcrypt(p1)
+            if create_db(hashed_pass):
                 result = True
         else:
             print(">>passwords are not match!!")
@@ -33,4 +35,5 @@ def create_db(mpassword):
                    password TEXT NOT NULL);"""
     )
     cursor.execute("""INSERT INTO masterpassword (password) VALUES(?)""", (mpassword,))
+    conn.commit()
     return True
