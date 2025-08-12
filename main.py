@@ -1,5 +1,6 @@
 import shlex
 import click
+import storage
 
 
 @click.group()
@@ -9,6 +10,7 @@ def cli():
 
 def shell():
     while True:
+        storage.check_db()
         try:
             command = input(">>>").strip()
             args = shlex.split(command)
@@ -16,7 +18,7 @@ def shell():
             if args[0] == "quit":
                 break
 
-            cli(*args, standalone_mode=False)
+            cli(args, standalone_mode=False)
         except Exception as error:
             print(f"Had Error: {error}")
 
