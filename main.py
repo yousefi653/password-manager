@@ -1,12 +1,21 @@
 import shlex
 import click
-import storage
+import storage, feature
 
 
 @click.group()
 def cli():
     pass
 
+
+@cli.command()
+@click.option("--site", prompt=">Enter site name: ", type=str)
+@click.option("--username", prompt=">Enter username", type=str)
+@click.option("--password", prompt=">Enter password: ", type=str)
+def add(site, username, password):
+    result = feature.add(site, username, password)
+    if result:
+        click.echo('>>added.')
 
 def shell():
     while True:
@@ -17,6 +26,9 @@ def shell():
 
             if args[0] == "quit":
                 break
+            if args[0] == 'clear':
+                click.clear()
+                continue
 
             cli(args, standalone_mode=False)
         except Exception as error:
