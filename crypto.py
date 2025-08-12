@@ -1,4 +1,5 @@
 import os
+import base64
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -66,3 +67,17 @@ def aes_gcm_decrypt(key, nonce, encrypted, tag):
 
     data = decryptor.update(encrypted) + decryptor.finalize()
     return data
+
+
+def to_base64(text):
+    if type(text) != bytes:
+        text = text.encode('utf-8')
+
+    return base64.b64encode(text).decode('utf-8')
+
+
+def to_text(text):
+    text = text.encode('utf-8')
+
+    return base64.b64decode(text).decode('utf-8')
+
