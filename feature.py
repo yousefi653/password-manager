@@ -1,4 +1,5 @@
 from getpass import getpass
+import sqlite3
 from prettytable import PrettyTable
 import crypto
 import storage
@@ -22,6 +23,13 @@ def add(site, username, password):
         return storage.write_data(data)
 
     raise PermissionError("master password is incorrect!!!")
+
+
+def remove(id):
+    mpassword = getpass(">Enter your masster password: ")
+    if storage.check_masterp(mpassword):
+        if storage.remove(id):
+            return True
 
 
 def show_data():

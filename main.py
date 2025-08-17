@@ -24,9 +24,16 @@ def List():
 
 
 @cli.command()
-@click.option("--id", prompt = ">Enter ID", type=int)
+@click.option("--id", prompt = ">Enter ID: ", type=int)
 def reveal(id):
     print(f"password: {feature.reveal(id)}")
+
+
+@cli.command()
+@click.option('--id', prompt = ">Enter ID: ", type=int)
+def remove(id):
+    if feature.remove(id):
+        print('>removed.')
 
 
 def shell():

@@ -55,8 +55,9 @@ def write_data(data):
     )
 
     values = []
-    for value in data.values():
-        values.append(value)
+    for item in data:
+        for value in data.values():
+            values.append(value)
 
     curosr.execute(
         """INSERT INTO data (site, username, encrypted, salt, nonce, tag) VALUES(?, ?, ?, ?, ?, ?);""",
@@ -78,9 +79,18 @@ def check_masterp(password):
 
 def read_data():
 
-    conn = sqlite3.connect('passwords.sqlite')
+    conn = sqlite3.connect("passwords.sqlite")
     cursor = conn.cursor()
 
     cursor.execute("""SELECT * FROM data;""")
     data = cursor.fetchall()
     return data
+
+
+def remove(id):
+    conn = sqlite3.connect("passwords.sqlite")
+    cursor = conn.cursor()
+
+    cursor.execute("""DELETE FROM data WHERE id == ?""", (id,))
+    conn.commit()
+    return True
