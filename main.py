@@ -15,7 +15,19 @@ def cli():
 def add(site, username, password):
     result = feature.add(site, username, password)
     if result:
-        click.echo('>>added.')
+        click.echo(">>added.")
+
+
+@cli.command()
+def List():
+    feature.show_data()
+
+
+@cli.command()
+@click.option("--id", prompt = ">Enter ID", type=int)
+def reveal(id):
+    print(f"password: {feature.reveal(id)}")
+
 
 def shell():
     while True:
@@ -26,7 +38,7 @@ def shell():
 
             if args[0] == "quit":
                 break
-            if args[0] == 'clear':
+            if args[0] == "clear":
                 click.clear()
                 continue
 

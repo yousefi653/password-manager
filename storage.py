@@ -30,7 +30,7 @@ def create_db(mpassword):
     cursor = conn.cursor()
 
     cursor.execute(
-        """CREATE TABLE masterpassword (
+        """CREATE TABLE masterpassword(
                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                    password TEXT NOT NULL);"""
     )
@@ -40,33 +40,47 @@ def create_db(mpassword):
 
 
 def write_data(data):
-    conn = sqlite3.connect('passwords.sqlite')
+    conn = sqlite3.connect("passwords.sqlite")
     curosr = conn.cursor()
 
-    curosr.execute("""CREATE TABLE IF NOT EXISTS data (
+    curosr.execute(
+        """CREATE TABLE IF NOT EXISTS data (
                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                    site TEXT NOT NULL,
                    username TEXT NOT NULL,
                    encrypted TEXT NOT NULL,
                    salt TEXT NOT NULL,
                    nonce TEXT NOT NULL,
-                   tag TEXT NOT NULL);""")
+                   tag TEXT NOT NULL);"""
+    )
 
     values = []
     for value in data.values():
         values.append(value)
 
-
-    curosr.execute("""INSERT INTO data (site, username, encrypted, salt, nonce, tag) VALUES(?, ?, ?, ?, ?, ?);""", tuple(values))
+    curosr.execute(
+        """INSERT INTO data (site, username, encrypted, salt, nonce, tag) VALUES(?, ?, ?, ?, ?, ?);""",
+        tuple(values),
+    )
     conn.commit()
     return True
 
 
 def check_masterp(password):
-    conn = sqlite3.connect('passwords.sqlite')
+    conn = sqlite3.connect("passwords.sqlite")
     cursor = conn.cursor()
 
     cursor.execute("""SELECT password FROM masterpassword;""")
     row = cursor.fetchone()
-    
+
     return crypto.check_password(password, row[0])
+
+
+def read_data():
+
+    conn = sqlite3.connect('passwords.sqlite')
+    cursor = conn.cursor()
+
+    cursor.execute("""SELECT * FROM data;""")
+    data = cursor.fetchall()
+    return data

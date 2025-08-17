@@ -71,13 +71,12 @@ def aes_gcm_decrypt(key, nonce, encrypted, tag):
 
 def to_base64(text):
     if type(text) != bytes:
-        text = text.encode('utf-8')
+        text = text.encode("utf-8")
 
-    return base64.b64encode(text).decode('utf-8')
+    return base64.b64encode(text).decode("utf-8")
 
 
 def to_text(text):
-    text = text.encode('utf-8')
+    text = text.encode("utf-8")
 
-    return base64.b64decode(text).decode('utf-8')
-
+    return base64.b64decode(text)
