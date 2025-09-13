@@ -1,5 +1,4 @@
 from getpass import getpass
-import sqlite3
 from prettytable import PrettyTable
 import crypto
 import storage
@@ -18,7 +17,7 @@ def add(site, username, password):
             "encrypted": crypto.to_base64(encrypted_data),
             "salt": crypto.to_base64(salt),
             "nonce": crypto.to_base64(nonce),
-            "tag    ": crypto.to_base64(tag),
+            "tag": crypto.to_base64(tag),
         }
         return storage.write_data(data)
 

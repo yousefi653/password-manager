@@ -1,6 +1,7 @@
 import shlex
 import click
 import storage, feature
+import pyperclip
 
 
 @click.group()
@@ -13,6 +14,10 @@ def cli():
 @click.option("--username", prompt=">Enter username", type=str)
 @click.option("--password", prompt=">Enter password: ", type=str)
 def add(site, username, password):
+    username = username.strip()
+    site = site.strip()
+    password = password.strip()
+
     result = feature.add(site, username, password)
     if result:
         click.echo(">>added.")
@@ -24,21 +29,28 @@ def List():
 
 
 @cli.command()
-@click.option("--id", prompt = ">Enter ID: ", type=int)
+@click.option("--id", prompt = ">Enter ID: ", type=str)
 def reveal(id):
-    print(f"password: {feature.reveal(id)}")
+    id = int(id.strip())
+    pyperclip.copy(feature.reveal(id))
+    print("password copy on your clipboard")
 
 
 @cli.command()
-@click.option('--id', prompt = ">Enter ID: ", type=int)
+@click.option('--id', prompt = ">Enter ID: ", type=str)
 def remove(id):
+    id = int(id.strip())
     if feature.remove(id):
         print('>removed.')
 
 
 def shell():
+    print(" WELCOME ".center(100, '*'))
+    cli(shlex.split('--help'), standalone_mode=False)
+    
     while True:
         storage.check_db()
+        storage.fix_id()
         try:
             command = input(">>>").strip()
             args = shlex.split(command)

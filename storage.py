@@ -36,14 +36,15 @@ def create_db(mpassword):
     )
     cursor.execute("""INSERT INTO masterpassword (password) VALUES(?)""", (mpassword,))
     conn.commit()
+    conn.close()
     return True
 
 
 def write_data(data):
     conn = sqlite3.connect("passwords.sqlite")
-    curosr = conn.cursor()
+    cursor = conn.cursor()
 
-    curosr.execute(
+    cursor.execute(
         """CREATE TABLE IF NOT EXISTS data (
                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                    site TEXT NOT NULL,
@@ -54,16 +55,22 @@ def write_data(data):
                    tag TEXT NOT NULL);"""
     )
 
-    values = []
-    for item in data:
-        for value in data.values():
-            values.append(value)
+    values = (
+        data["site"],
+        data["username"],
+        data["encrypted"],
+        data["salt"],
+        data["nonce"],
+        data["tag"]
+    )
 
-    curosr.execute(
+
+    cursor.execute(
         """INSERT INTO data (site, username, encrypted, salt, nonce, tag) VALUES(?, ?, ?, ?, ?, ?);""",
         tuple(values),
     )
     conn.commit()
+    conn.close()
     return True
 
 
@@ -73,6 +80,7 @@ def check_masterp(password):
 
     cursor.execute("""SELECT password FROM masterpassword;""")
     row = cursor.fetchone()
+    conn.close()
 
     return crypto.check_password(password, row[0])
 
@@ -84,6 +92,7 @@ def read_data():
 
     cursor.execute("""SELECT * FROM data;""")
     data = cursor.fetchall()
+    conn.close()
     return data
 
 
@@ -91,6 +100,21 @@ def remove(id):
     conn = sqlite3.connect("passwords.sqlite")
     cursor = conn.cursor()
 
-    cursor.execute("""DELETE FROM data WHERE id == ?""", (id,))
+    cursor.execute("""DELETE FROM data WHERE id = ?""", (id,))
     conn.commit()
+    conn.close()
     return True
+
+
+def fix_id():
+    data = read_data()
+
+    conn = sqlite3.connect('passwords.sqlite')
+    cursor = conn.cursor()
+    
+    n = 0
+    for i in range(len(data)):
+        n+=1 
+        cursor.execute('''UPDATE data SET id=? WHERE id==?;''', (n, data[i][0]))
+        conn.commit()
+    conn.close()
