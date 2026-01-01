@@ -107,14 +107,17 @@ def remove(id):
 
 
 def fix_id():
-    data = read_data()
-
-    conn = sqlite3.connect('passwords.sqlite')
-    cursor = conn.cursor()
-    
-    n = 0
-    for i in range(len(data)):
-        n+=1 
-        cursor.execute('''UPDATE data SET id=? WHERE id==?;''', (n, data[i][0]))
-        conn.commit()
-    conn.close()
+    try:
+        data = read_data()
+    except:
+        pass
+    else:
+        conn = sqlite3.connect('passwords.sqlite')
+        cursor = conn.cursor()
+        
+        n = 0
+        for i in range(len(data)):
+            n+=1 
+            cursor.execute('''UPDATE data SET id=? WHERE id==?;''', (n, data[i][0]))
+            conn.commit()
+        conn.close()
