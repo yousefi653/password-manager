@@ -51,10 +51,19 @@ A secure and simple password manager to store and manage your passwords.
 
 * Note: The Master Password is never stored. Without it, there is no access to your data.
 
+## Errors
+
+The storage layer wraps raw `sqlite3` failures in a single `StorageError`
+carrying a readable message. For example, registering an email that is already
+in use raises `StorageError("an account with this email already exists")`
+instead of leaking an `IntegrityError` traceback.
+
 ## Project Structure
 password-manager/
+├── cache_service.py
 ├── crypto.py
 ├── feature.py
+├── logger.py
 ├── main.py
 ├── README.md
 ├── requirements.txt

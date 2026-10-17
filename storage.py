@@ -8,17 +8,40 @@ logger = get_logger(__name__)
 DB_PATH = "passwords.sqlite"
 
 
+class StorageError(Exception):
+    """Raised when the database rejects an operation, with a readable message."""
+
+
+_FRIENDLY_ERRORS = {
+    "users.email": "an account with this email already exists",
+    "users.username": "this username is already taken",
+    "FOREIGN KEY": "referenced record does not exist",
+}
+
+
+def _friendly_message(error):
+    message = str(error)
+    for marker, friendly in _FRIENDLY_ERRORS.items():
+        if marker in message:
+            return friendly
+    return f"database error: {message}"
+
+
 class DatabaseService:
     @staticmethod
     @contextmanager
     def _connect():
         logger.debug("database: opening connection to %s", DB_PATH)
         conn = sqlite3.connect(DB_PATH)
-        DatabaseService._create(cursor=conn.cursor())
         try:
+            DatabaseService._create(cursor=conn.cursor())
             yield conn.cursor(), conn
             conn.commit()
             logger.debug("database: transaction committed")
+        except sqlite3.DatabaseError as error:
+            logger.warning("database: %s, rolling back", error)
+            conn.rollback()
+            raise StorageError(_friendly_message(error)) from error
         except Exception:
             logger.exception("database: transaction failed, rolling back")
             conn.rollback()
@@ -70,7 +93,9 @@ class DatabaseService:
                 "INSERT INTO users (username, email, password) VALUES (?, ?, ?);",
                 (username, email, password),
             )
-            logger.info("users: created user id=%s username=%r", cursor.lastrowid, username)
+            logger.info(
+                "users: created user id=%s username=%r", cursor.lastrowid, username
+            )
         return True
 
     @classmethod
@@ -132,7 +157,9 @@ class DatabaseService:
                 (user_id,),
             )
             row = cursor.fetchone()
-        logger.debug("masterpassword: lookup user id=%s found=%s", user_id, row is not None)
+        logger.debug(
+            "masterpassword: lookup user id=%s found=%s", user_id, row is not None
+        )
         return row[0] if row else None
 
     @classmethod
@@ -179,7 +206,9 @@ class DatabaseService:
                     data["tag"],
                 ),
             )
-            logger.info("data: saved entry id=%s site=%r", cursor.lastrowid, data.get("site"))
+            logger.info(
+                "data: saved entry id=%s site=%r", cursor.lastrowid, data.get("site")
+            )
         return True
 
     @classmethod

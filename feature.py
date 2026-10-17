@@ -14,7 +14,7 @@ from prettytable import PrettyTable
 import crypto
 from cache_service import RedisService
 from logger import get_logger
-from storage import DatabaseService
+from storage import DatabaseService, StorageError
 
 logger = get_logger(__name__)
 
@@ -155,6 +155,10 @@ def signup():
     master_password = crypto.encrypt_bcrypt(master_password)
     try:
         created = DatabaseService.add_user(username=username, email=email, password=master_password)
+    except StorageError as error:
+        logger.warning("signup rejected for %s: %s", email, error)
+        print(f"Cannot create account: {error}.")
+        return False
     except Exception:
         logger.exception("signup failed for %s: could not create user", email)
         raise
