@@ -13,7 +13,10 @@ from prettytable import PrettyTable
 
 import crypto
 from cache_service import RedisService
+from logger import get_logger
 from storage import DatabaseService
+
+logger = get_logger(__name__)
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -26,17 +29,27 @@ REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 
 
 def timer(stop_event):
+    logger.debug("verification timer started (120s)")
     for secound in range(120, -1, -1):
         print(f"\rYou have {secound} seconds to enter the verification code.", end="")
         time.sleep(1)
         if stop_event.is_set():
+            logger.debug("verification timer stopped early by caller")
             break
     print("\nTime is up! Please request a new verification code.")
+    logger.info("verification timer finished")
 
 
 def generate_verfication_code(user_email):
-    count = RedisService.get(key=f"{user_email}:verification_code:count") or 0
+    logger.debug("verification code requested for %s", user_email)
+    try:
+        count = RedisService.get(key=f"{user_email}:verification_code:count") or 0
+    except Exception:
+        logger.exception("failed to read verification attempts for %s", user_email)
+        raise
+
     if int(count) > 5:
+        logger.warning("verification limit reached for %s (attempts=%s)", user_email, count)
         RedisService.set(key=f"{user_email}:limit_reached", value="true", ttl=3600)
         print("You have reached the maximum number of verification code requests. Please try again after 1 hour.")
         return None
@@ -44,6 +57,7 @@ def generate_verfication_code(user_email):
     code = f"{secrets.randbelow(1_000_000):06d}"
     RedisService.set(key=f"{user_email}:verification_code", value=code, ttl=120)
     RedisService.increase(key=f"{user_email}:verification_code:count", )
+    logger.info("verification code generated for %s (ttl=120s, attempts=%s)", user_email, int(count) + 1)
     return code
 
 
@@ -54,18 +68,27 @@ def send_verfication_email(email, verification_code):
     msg["From"] = EMAIL_HOST_USER
     msg["To"] = email
 
+    logger.info("sending verification email to %s via %s:%s", email, EMAIL_HOST, EMAIL_HOST_PORT)
+
     try:
         with smtplib.SMTP(host=EMAIL_HOST, port=EMAIL_HOST_PORT, timeout=20) as smtp:
             smtp.ehlo()
             smtp.starttls(context=ssl.create_default_context())
             smtp.login(user=EMAIL_HOST_USER, password=EMAIL_HOST_PASSWORD)
+            logger.debug("SMTP session authenticated for %s", email)
 
     except (
         smtplib.SMTPConnectError,
         smtplib.SMTPHeloError,
         smtplib.SMTPAuthenticationError,
     ):
+        logger.exception("failed to send verification email to %s", email)
         return False
+
+    logger.warning(
+        "verification email NOT dispatched to %s: no send_message() call in SMTP block",
+        email,
+    )
 
 
 def validate_email(email):
@@ -74,8 +97,10 @@ def validate_email(email):
 
 
 def verify_account(email):
+    logger.info("account verification started for %s", email)
     code = generate_verfication_code(user_email=email)
     if code is None:
+        logger.warning("account verification aborted for %s: no code generated", email)
         return False    
 
     send_verfication_email(email=email, verification_code=code)
@@ -86,56 +111,80 @@ def verify_account(email):
     thread = threading.Thread(target=timer, args=(stop_event,), daemon=True)
     thread.start()
 
+    attempts = 0
     while thread.is_alive():
         input_code = input(">Enter the verification code: ").strip()
         code = RedisService.get(f"{email}:verification_code")
+        attempts += 1
         
         if input_code != code:
+            logger.warning("incorrect verification code for %s (attempt %s)", email, attempts)
             print("Incorrect verification code. Please try again.")
             continue
         else:
+            logger.info("verification code accepted for %s after %s attempt(s)", email, attempts)
             stop_event.set()
             thread.join()
             return True
 
+    logger.warning("verification code expired for %s after %s attempt(s)", email, attempts)
     print("Verification code expired. Please request a new code.")
     return False
 
 def signup():
+    logger.info("signup started")
     username = input(">Enter your username: ").strip()
+    logger.debug("signup: username=%r", username)
 
     while True:
         email = input(">Enter your email: ").strip()
         if validate_email(email):
             break
+        logger.warning("signup: rejected invalid email format %r", email)
         print("Invalid email format. Please try again.")
+
+    logger.info("signup: registering username=%r email=%s", username, email)
 
     master_password = getpass(">Enter your master password: ")
     confirm_password = getpass(">Confirm your master password: ")
 
     if master_password != confirm_password:
+        logger.warning("signup aborted for %s: passwords do not match", email)
         raise ValueError("Passwords do not match.")
 
     master_password = crypto.encrypt_bcrypt(master_password)
-    if DatabaseService.add_user(username=username, email=email, password=master_password):
+    try:
+        created = DatabaseService.add_user(username=username, email=email, password=master_password)
+    except Exception:
+        logger.exception("signup failed for %s: could not create user", email)
+        raise
+
+    if created:
+        logger.info("user registered username=%r email=%s", username, email)
         print("User registered successfully.")
     else:
+        logger.error("user registration returned false for %s", email)
         print("Failed to register user.")
         print("Please try again.")
         return False
 
-    for i in range(5):
+    for attempt in range(1, 6):
+        logger.debug("signup: verification attempt %s/5 for %s", attempt, email)
         result = verify_account(email=email)
         if result is False:
             new_code = input(">Do you want to request a new verification code? (y/n): ").strip().lower()
             if new_code == "y":
                 continue
             else:
+                logger.warning("signup: verification aborted by user for %s", email)
                 print("Verification process aborted.")
                 return False
         else:
+            logger.info("account verified successfully for %s", email)
             print("Account verified successfully.")
             return True
+
+    logger.warning("signup: verification attempts exhausted for %s", email)
     return False
 
 

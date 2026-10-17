@@ -2,6 +2,10 @@ import base64
 import os
 
 import bcrypt
+
+from logger import get_logger
+
+logger = get_logger(__name__)
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -13,15 +17,20 @@ backend = default_backend()
 def encrypt_bcrypt(password):
     password = password.encode("utf-8")
     salt = bcrypt.gensalt(15)
+    logger.debug("bcrypt: hashing password (cost=15)")
 
     hashed_pass = bcrypt.hashpw(password, salt)
+    logger.debug("bcrypt: hash created (%s bytes)", len(hashed_pass))
     return hashed_pass
 
 
 def check_password(password, hashed_pass):
     password = password.encode("utf-8")
-    
-    return bcrypt.checkpw(password, hashed_pass.encode("utf-8"))
+    logger.debug("bcrypt: verifying password")
+
+    result = bcrypt.checkpw(password, hashed_pass.encode("utf-8"))
+    logger.debug("bcrypt: verification result=%s", result)
+    return result
 
 
 def kdf(mpassword, salt=None):
@@ -30,8 +39,10 @@ def kdf(mpassword, salt=None):
     check_salt = False
     if salt is None:
         salt = os.urandom(16)
+        logger.debug("pbkdf2: generated new 16-byte salt")
     else:
         check_salt = True
+        logger.debug("pbkdf2: reusing stored salt (%s bytes)", len(salt))
 
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
@@ -42,6 +53,7 @@ def kdf(mpassword, salt=None):
     )
 
     key = kdf.derive(mpassword)
+    logger.debug("pbkdf2: derived 32-byte key (iterations=100000)")
 
     if check_salt:
         return key
@@ -57,6 +69,7 @@ def aes_gcm_encrypt(password, key):
     ).encryptor()
     encrypted = encryptor.update(password) + encryptor.finalize()
     tag = encryptor.tag
+    logger.debug("aes-gcm: encrypted %s-byte payload", len(encrypted))
     return nonce, encrypted, tag
 
 
@@ -66,6 +79,7 @@ def aes_gcm_decrypt(key, nonce, encrypted, tag):
     ).decryptor()
 
     data = decryptor.update(encrypted) + decryptor.finalize()
+    logger.debug("aes-gcm: decrypted %s-byte payload", len(data))
     return data
 
 
