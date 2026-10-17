@@ -1,3 +1,6 @@
 passwords.sqlite
 passwords.sqlite-journal
 __pycache__
+todo.md
+.freebuff
+.env
