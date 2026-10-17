@@ -1,11 +1,11 @@
-import os
 import base64
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import os
+
+import bcrypt
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-import bcrypt
-
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 backend = default_backend()
 
@@ -15,12 +15,12 @@ def encrypt_bcrypt(password):
     salt = bcrypt.gensalt(15)
 
     hashed_pass = bcrypt.hashpw(password, salt)
-    return hashed_pass.decode("utf-8")
+    return hashed_pass
 
 
 def check_password(password, hashed_pass):
     password = password.encode("utf-8")
-
+    
     return bcrypt.checkpw(password, hashed_pass.encode("utf-8"))
 
 

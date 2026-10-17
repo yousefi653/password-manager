@@ -44,13 +44,15 @@ def remove(id):
         print('>removed.')
 
 
+@cli.command()
+def signup():
+    feature.signup()
+
 def shell():
     print(" WELCOME ".center(100, '*'))
     cli(shlex.split('--help'), standalone_mode=False)
     
     while True:
-        storage.check_db()
-        storage.fix_id()
         try:
             command = input(">>>").strip()
             args = shlex.split(command)
