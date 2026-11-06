@@ -1,61 +1,84 @@
 # Password Manager
 
-A secure and simple password manager to store and manage your passwords.
+A command-line password manager written in Python. It stores website credentials in a local SQLite database and encrypts saved passwords before storing them.
 
 ## Features
 
-- Secure password storage using AES-GCM encryption
-- Secure copy-to-clipboard functionality
-- The ability to edit saved password information
-- The ability to manage saved passwords
+- Add and manage saved website credentials
+- Protect the master password with bcrypt hashing
+- Derive an encryption key from the master password using PBKDF2-HMAC-SHA256
+- Encrypt and decrypt stored passwords using AES-GCM
+- Copy a revealed password to the clipboard
+- Store credential records in SQLite
 
-* Note: The Master Password is never stored. Without it, there is no access to your data.
+## Technologies
 
-## Security
+- Python
+- SQLite
+- Click
+- bcrypt
+- cryptography
+- pyperclip
 
-- Uses AES-GCM for data encryption
-- PBKDF2 for deriving encryption keys from the Master Password
-- Random IV for each entry
+## Requirements
+
+- Python 3.10 or newer
+- Dependencies listed in `requirements.txt`
+- On Linux, a clipboard utility such as `xclip` or `xsel` may be required by the clipboard package.
 
 ## Installation
 
-### Requirements
+Clone the repository:
 
-- Python 3.10+
-- pip
-- bcrypt==4.3.0
-- click==8.2.1
-- cryptography==45.0.7
-- prettytable==3.16.0
-- pycparser==2.22 >>> For use in Linux, the package (xclip or xsel) must also be installed. (sudo apt install xclip, sudo apt install xsel)
+```bash
+git clone https://github.com/yousefi653/password-manager.git
+cd password-manager
+```
 
-### Steps
+Create and activate a virtual environment:
 
-1. Clone the repository:
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
 
-    git clone https://github.com/yousefi653/password-manager.git
-    cd password-manager
+On Windows PowerShell:
 
-2. Install dependencies:
+```powershell
+.venv\\Scripts\\Activate.ps1
+```
 
-    pip install -r requirements.txt
+Install dependencies:
 
-3. Run the application:
-    python main.py
+```bash
+pip install -r requirements.txt
+```
 
-## Usage
+## Run
 
-- Create an account: On the first run, choose a Master Password.
-- Add passwords: Enter site, username, and password.
-- manage: Categorize and search your stored passwords.
+```bash
+python main.py
+```
 
-* Note: The Master Password is never stored. Without it, there is no access to your data.
+On the first run, the application prompts you to create a master password. Use the interactive help to see the available commands.
+
+## Security Notes
+
+- The master password is stored as a bcrypt hash rather than as plaintext.
+- Saved passwords are encrypted with AES-GCM.
+- The encryption key is derived from the master password using PBKDF2-HMAC-SHA256 and a per-database salt.
+- AES-GCM uses a nonce and authentication tag to protect encrypted data.
+
+This is an educational project, not a professionally audited password manager. Do not use it to store important or production credentials without a thorough security review. In particular, review the key-derivation parameters, master-password handling, database lifecycle, and backup/recovery behavior before relying on it.
 
 ## Project Structure
+
+```text
 password-manager/
 ├── crypto.py
 ├── feature.py
 ├── main.py
-├── README.md
+├── storage.py
 ├── requirements.txt
-└── storage.py
+└── README.md
+```
