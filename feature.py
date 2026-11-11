@@ -1,10 +1,9 @@
+import json
 import os
 import re
 import secrets
 import smtplib
 import ssl
-import threading
-import time
 from email.message import EmailMessage
 from getpass import getpass
 
@@ -26,18 +25,6 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 EMAIL_HOST_PORT = int(os.getenv("EMAIL_HOST_PORT", "587"))
 REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-
-
-def timer(stop_event):
-    logger.debug("verification timer started (120s)")
-    for secound in range(120, -1, -1):
-        print(f"\rYou have {secound} seconds to enter the verification code.", end="")
-        time.sleep(1)
-        if stop_event.is_set():
-            logger.debug("verification timer stopped early by caller")
-            break
-    print("\nTime is up! Please request a new verification code.")
-    logger.info("verification timer finished")
 
 
 def generate_verfication_code(user_email):
@@ -75,7 +62,9 @@ def send_verfication_email(email, verification_code):
             smtp.ehlo()
             smtp.starttls(context=ssl.create_default_context())
             smtp.login(user=EMAIL_HOST_USER, password=EMAIL_HOST_PASSWORD)
+            smtp.send_message(msg=msg)
             logger.debug("SMTP session authenticated for %s", email)
+            return True
 
     except (
         smtplib.SMTPConnectError,
@@ -101,35 +90,39 @@ def verify_account(email):
     code = generate_verfication_code(user_email=email)
     if code is None:
         logger.warning("account verification aborted for %s: no code generated", email)
-        return False    
+        return False
 
     send_verfication_email(email=email, verification_code=code)
     print("A verification code has been sent to your email. Please check your inbox.")
-    
-    
-    stop_event = threading.Event()
-    thread = threading.Thread(target=timer, args=(stop_event,), daemon=True)
-    thread.start()
+    print("This code is valid until 120s.")
 
     attempts = 0
-    while thread.is_alive():
+    while True:
+        attempts += 1
         input_code = input(">Enter the verification code: ").strip()
         code = RedisService.get(f"{email}:verification_code")
-        attempts += 1
-        
+        if code is None:
+            logger.warning("verification code expired for %s", email)
+            print("Verification code expired. Please request a new code.")
+            return False
+
+        if attempts > 5:
+            RedisService.delete(f"{email}:verification_code")
+            print("Maximum verification attempts exceeded. Please request a new code.")
+            return False
+
         if input_code != code:
-            logger.warning("incorrect verification code for %s (attempt %s)", email, attempts)
+            logger.warning(
+                "incorrect verification code for %s (attempt %s)", email, attempts
+            )
             print("Incorrect verification code. Please try again.")
             continue
         else:
-            logger.info("verification code accepted for %s after %s attempt(s)", email, attempts)
-            stop_event.set()
-            thread.join()
+            logger.info(
+                "verification code accepted for %s after %s attempt(s)", email, attempts
+            )
             return True
 
-    logger.warning("verification code expired for %s after %s attempt(s)", email, attempts)
-    print("Verification code expired. Please request a new code.")
-    return False
 
 def signup():
     logger.info("signup started")
