@@ -178,6 +178,10 @@ def signup():
                 return False
         else:
             logger.info("account verified successfully for %s", email)
+            user = DatabaseService.get_user_by_email(email=email)
+            
+            user_id = user[0]
+            DatabaseService.update_user(user_id=user_id, is_verfied=1)
             print("Account verified successfully.")
             return True
 
