@@ -192,6 +192,85 @@ def signup():
     return False
 
 
+def login():
+    logger.info("login started")
+
+    while True:
+        email = input(">Enter your email: ").strip()
+        if not validate_email(email):
+            continue
+
+        password = getpass(">Enter your master password: ")
+        break
+
+    try:
+        user = DatabaseService.get_user_by_email(email=email)
+    except StorageError as error:
+        logger.warning("login failed for %s: %s", email, error)
+        print(f"Login failed: {error}.")
+        return False
+    except Exception:
+        logger.exception("login failed for %s: could not retrieve user", email)
+        raise
+
+    if user is None:
+        logger.warning("login failed for %s: user not found", email)
+        print("User not found. Please check your email or sign up.")
+        return False
+
+    user_id = user[0]
+    username = user[1]
+    user_email = user[2]
+    stored_password = user[3]
+    is_verfied = user[-1]
+
+
+    if not bool(is_verfied):
+        print(
+            "Your account is not verified. Please verify your account before logging in."
+        )
+        for attempt in range(1, 6):
+            logger.debug("login: verification attempt %s/5 for %s", attempt, email)
+            result = verify_account(email=email)
+            if result is False:
+                new_code = (
+                    input(">Do you want to request a new verification code? (y/n): ")
+                    .strip()
+                    .lower()
+                )
+                if new_code == "y":
+                    continue
+                else:
+                    logger.warning("login: verification aborted by user for %s", email)
+                    print("Verification process aborted.")
+                    return False
+            else:
+                logger.info("account verified successfully for %s", email)
+                DatabaseService.update_user(user_id=user_id, is_verfied=is_verfied)
+                print("Account verified successfully.")
+                return True
+
+    if crypto.check_password(password, stored_password):
+        logger.info("login successful for %s", email)
+
+        RedisService.set(
+            f"sessions:user:{user_id}",
+            json.dumps(
+                {
+                    "user_email": user_email,
+                    "is_verfied": is_verfied,
+                    "username": username,
+                }
+            ),
+            60*15
+        )
+        print("Login successful.")
+
+    else:
+        logger.warning("login failed for %s: incorrect password", email)
+        print("Incorrect password. Please try again.")
+        return False
+
 
 # def add(site, username, password):
 #     mpassword = getpass(">Enter your master password: ")

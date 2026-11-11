@@ -90,6 +90,13 @@ def signup():
     logger.info("signup: requested")
     feature.signup()
 
+
+@cli.command()
+def login():
+    logger.info("login: requested")
+    feature.login()
+
+
 def shell():
     logger.info("shell: application starting")
     print(" WELCOME ".center(100, '*'))

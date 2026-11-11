@@ -107,6 +107,14 @@ class DatabaseService:
         return row
 
     @classmethod
+    def get_user_by_email(cls, email):
+        with cls._connect() as (cursor, _):
+            cursor.execute("SELECT * FROM users WHERE email = ?;", (email,))
+            row = cursor.fetchone()
+        logger.debug("users: lookup email=%s found=%s", email, row is not None)
+        return row
+
+    @classmethod
     def get_all_users(cls):
         with cls._connect() as (cursor, _):
             cursor.execute("SELECT * FROM users;")
@@ -115,7 +123,7 @@ class DatabaseService:
         return rows
 
     @classmethod
-    def update_user(cls, user_id, username=None, email=None, password=None):
+    def update_user(cls, user_id, username=None, email=None, password=None, is_verfied=None):
         fields = {"username": username, "email": email, "password": password}
         updates = {k: v for k, v in fields.items() if v is not None}
         with cls._connect() as (cursor, _):

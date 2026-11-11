@@ -28,7 +28,7 @@ def check_password(password, hashed_pass):
     password = password.encode("utf-8")
     logger.debug("bcrypt: verifying password")
 
-    result = bcrypt.checkpw(password, hashed_pass.encode("utf-8"))
+    result = bcrypt.checkpw(password, hashed_pass)
     logger.debug("bcrypt: verification result=%s", result)
     return result
 
